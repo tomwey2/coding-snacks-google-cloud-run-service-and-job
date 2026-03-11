@@ -1,0 +1,27 @@
+# Basis-Image: Python 3.11 Slim
+FROM python:3.11-slim
+
+# Verhindert, dass Python stdout/stderr puffert 
+# (Wichtig, damit wir die print()-Ausgaben sofort in den Cloud Run Logs sehen).
+ENV PYTHONUNBUFFERED=1
+
+# Arbeitsverzeichnis im Container
+WORKDIR /app
+
+# uv installieren
+RUN pip install --no-cache-dir uv
+
+# Profil-/Abhängigkeiten kopieren
+COPY pyproject.toml /app/
+
+# Abhängigkeiten via uv installieren
+# (Auch wenn der reine Worker-Code evtl. nur Standard-Python nutzt, 
+#  so kann er trotzdem auf das gleiche Umfeld wie der Webservice zugreifen -
+#  z.B., falls wir später Google Cloud APIs im Worker brauchen)
+RUN uv pip install --system -r pyproject.toml
+
+# Skript selbst kopieren
+COPY run_worker.py /app/
+
+# Das Skript direkt als Standard-Command starten
+CMD ["python", "run_worker.py"]

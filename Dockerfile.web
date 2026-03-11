@@ -1,0 +1,24 @@
+# Basis-Image: Python 3.11 Slim für einen kleinen Footprint
+FROM python:3.11-slim
+
+# Verhindert, dass Python stdout/stderr puffert (sinnvoll für Logs in der Cloud)
+ENV PYTHONUNBUFFERED=1
+
+# Arbeitsverzeichnis im Container setzen
+WORKDIR /app
+
+# uv (den schnellen Pthon-Paketmanager) installieren
+RUN pip install --no-cache-dir uv
+
+# Nur die notwendigen Abhängigkeitsdateien im Vorhinein reinkopieren um Docker-Caching auszunutzen
+COPY pyproject.toml /app/
+
+# Projektabhängigkeiten systemweit (--system) per uv aus der pyproject.toml installieren
+RUN uv pip install --system -r pyproject.toml
+
+# Quellcode kopieren
+COPY run_web.py /app/
+
+# Den Flask-Service produktionsbereit mit Gunicorn starten.
+# bind :$PORT sorgt dafür, dass Cloud Run den Port dynamisch zuweisen kann.
+CMD exec gunicorn --bind :$PORT --workers 1 --threads 8 --timeout 0 run_web:app
