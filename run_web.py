@@ -115,7 +115,7 @@ def start_worker():
 
         # Konfigurationen aus Umgebungsvariablen laden (mit sinnvollen Fallbacks für lokales Testing)
         # Für einen echten Einsatz müssen GOOGLE_CLOUD_PROJECT und GOOGLE_CLOUD_REGION gesetzt werden.
-        project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "DEIN_GCP_PROJECT_ID")
+        project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "cleankoda-poc")
         region = os.environ.get("GOOGLE_CLOUD_REGION", "europe-west1")
         job_id = "poc-worker-job"
 
