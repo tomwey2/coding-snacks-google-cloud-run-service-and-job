@@ -52,7 +52,7 @@ HTML_TEMPLATE = """
 <body>
     <div class="card">
         <h1 class="mb-3 text-primary">Cloud Run PoC</h1>
-        <p class="text-muted">Startet den dynamischen Cloud Run Worker-Job direkt aus dem Frontend.</p>
+        <p class="text-muted">Startet den super dynamischen Cloud Run Worker-Job direkt aus dem Frontend.</p>
         <button id="start-btn" class="btn btn-primary btn-lg btn-start" onclick="startWorker()">Start Worker</button>
         <div id="response-msg"></div>
     </div>
