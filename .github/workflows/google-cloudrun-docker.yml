@@ -71,6 +71,7 @@ jobs:
           service: '${{ env.WEB_SERVICE }}'
           region: '${{ env.REGION }}'
           image: '${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.WEB_SERVICE }}:${{ github.sha }}'
+          flags: '--allow-unauthenticated'
 
       # --- 4. DEPLOY AGENT (JOB) ---
       - name: 'Deploy Agent to Cloud Run Job'
