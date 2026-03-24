@@ -1,0 +1,87 @@
+# This workflow builds and pushes two Docker containers to Google Artifact Registry
+# and deploys them to Cloud Run (one as a Service, one as a Job) 
+# when a commit is pushed to the "main" branch.
+
+name: 'Build and Deploy to Cloud Run (Service & Job)'
+
+on:
+  push:
+    branches:
+      - 'main' # Falls du noch 'master' nutzt, hier anpassen
+
+env:
+  PROJECT_ID: 'cleankoda-poc' # TODO: update to your Google Cloud project ID
+  REGION: 'europe-west3' # TODO: update to your region (z.B. europe-west3 für Frankfurt)
+  AR_REPO: 'cleankoda-repo' # TODO: update to your Artifact Registry repository name
+  
+  WEB_SERVICE: 'poc-web-service' # Name des Cloud Run Services (Frontend)
+  AGENT_JOB: 'poc-worker-job' # Name des Cloud Run Jobs (Worker)
+  
+  WORKLOAD_IDENTITY_PROVIDER: 'projects/785524207996/locations/global/workloadIdentityPools/github-pool/providers/github-provider' 
+
+jobs:
+  deploy:
+    runs-on: 'ubuntu-latest'
+
+    # Diese Permissions sind ZWINGEND ERFORDERLICH für Workload Identity Federation!
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: 'Checkout Code'
+        uses: 'actions/checkout@v4'
+
+      # Authentifizierung über Workload Identity
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: 'google-github-actions/auth@v2'
+        with:
+          workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
+          service_account: 'github-actions-sa@cleankoda-poc.iam.gserviceaccount.com'
+
+      # Docker Login an der Artifact Registry
+      - name: 'Docker Auth'
+        uses: 'docker/login-action@v3'
+        with:
+          username: 'oauth2accesstoken'
+          password: '${{ steps.auth.outputs.auth_token }}'
+          registry: '${{ env.REGION }}-docker.pkg.dev'
+
+      # --- 1. WEB APP (SERVICE) BUILD & PUSH ---
+      - name: 'Build Web Container'
+        run: |-
+          WEB_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.WEB_SERVICE }}:${{ github.sha }}"
+          docker build -f Dockerfile.web --tag "${WEB_TAG}" .
+          docker push "${WEB_TAG}"
+
+      # --- 2. AGENT (JOB) BUILD & PUSH ---
+      - name: 'Build Agent Container'
+        run: |-
+          AGENT_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.AGENT_JOB }}:${{ github.sha }}"
+          docker build -f Dockerfile.agent.java --tag "${AGENT_TAG}" .
+          docker push "${AGENT_TAG}"
+
+      # --- 3. DEPLOY WEB APP (SERVICE) ---
+      - name: 'Deploy Web to Cloud Run Service'
+        id: 'deploy-web'
+        uses: 'google-github-actions/deploy-cloudrun@v2'
+        with:
+          service: '${{ env.WEB_SERVICE }}'
+          region: '${{ env.REGION }}'
+          image: '${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.WEB_SERVICE }}:${{ github.sha }}'
+
+      # --- 4. DEPLOY AGENT (JOB) ---
+      - name: 'Deploy Agent to Cloud Run Job'
+        id: 'deploy-agent'
+        uses: 'google-github-actions/deploy-cloudrun@v2'
+        with:
+          job: '${{ env.AGENT_JOB }}' # WICHTIG: Hier 'job' statt 'service' nutzen!
+          region: '${{ env.REGION }}'
+          image: '${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.AGENT_JOB }}:${{ github.sha }}'
+
+      # Output URLs anzeigen
+      - name: 'Show Deployment Output'
+        run: |
+          echo "Web Service deployed to: ${{ steps.deploy-web.outputs.url }}"
+          echo "Agent Job updated successfully."
