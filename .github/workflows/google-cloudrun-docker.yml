@@ -7,7 +7,7 @@ name: 'Build and Deploy to Cloud Run (Service & Job)'
 on:
   push:
     branches:
-      - 'main' # Falls du noch 'master' nutzt, hier anpassen
+      - 'master' # Falls du noch 'master' nutzt, hier anpassen
 
 env:
   PROJECT_ID: 'cleankoda-poc' # TODO: update to your Google Cloud project ID
