@@ -10,14 +10,15 @@ on:
       - 'master' # Falls du noch 'master' nutzt, hier anpassen
 
 env:
-  PROJECT_ID: 'cleankoda-poc' # TODO: update to your Google Cloud project ID
-  REGION: 'europe-west3' # TODO: update to your region (z.B. europe-west3 für Frankfurt)
-  AR_REPO: 'cleankoda-repo' # TODO: update to your Artifact Registry repository name
+  PROJECT_ID: '${{ vars.GCP_PROJECT_ID }}' # the Google Cloud project ID
+  REGION: '${{ vars.GCP_REGION }}' # the region (i.e. europe-west3 for Frankfurt)
+  AR_REPO: '${{ vars.GCP_AR_REPO }}' # the GCP Artifact Registry repository name
   
+  WORKLOAD_IDENTITY_PROVIDER: '${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}' 
+  SERVICE_ACCOUNT: '${{ vars.GCP_SERVICE_ACCOUNT }}'
+
   WEB_SERVICE: 'poc-web-service' # Name des Cloud Run Services (Frontend)
   AGENT_JOB: 'poc-worker-job' # Name des Cloud Run Jobs (Worker)
-  
-  WORKLOAD_IDENTITY_PROVIDER: 'projects/785524207996/locations/global/workloadIdentityPools/github-pool/providers/github-provider' 
 
 jobs:
   deploy:
@@ -38,7 +39,7 @@ jobs:
         uses: 'google-github-actions/auth@v2'
         with:
           workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
-          service_account: 'github-actions-sa@cleankoda-poc.iam.gserviceaccount.com'
+          service_account: '${{ env.SERVICE_ACCOUNT }}'
           token_format: 'access_token'
 
       # Docker Login an der Artifact Registry
@@ -71,7 +72,6 @@ jobs:
           service: '${{ env.WEB_SERVICE }}'
           region: '${{ env.REGION }}'
           image: '${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.WEB_SERVICE }}:${{ github.sha }}'
-          flags: '--allow-unauthenticated'
 
       # --- 4. DEPLOY AGENT (JOB) ---
       - name: 'Deploy Agent to Cloud Run Job'
