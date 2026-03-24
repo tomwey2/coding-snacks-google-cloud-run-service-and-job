@@ -60,7 +60,7 @@ jobs:
       - name: 'Build Agent Container'
         run: |-
           AGENT_TAG="${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.AR_REPO }}/${{ env.AGENT_JOB }}:${{ github.sha }}"
-          docker build -f Dockerfile.agent.java --tag "${AGENT_TAG}" .
+          docker build -f Dockerfile.worker --tag "${AGENT_TAG}" .
           docker push "${AGENT_TAG}"
 
       # --- 3. DEPLOY WEB APP (SERVICE) ---
