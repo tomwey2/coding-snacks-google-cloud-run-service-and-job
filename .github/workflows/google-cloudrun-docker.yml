@@ -39,13 +39,14 @@ jobs:
         with:
           workload_identity_provider: '${{ env.WORKLOAD_IDENTITY_PROVIDER }}'
           service_account: 'github-actions-sa@cleankoda-poc.iam.gserviceaccount.com'
+          token_format: 'access_token'
 
       # Docker Login an der Artifact Registry
       - name: 'Docker Auth'
         uses: 'docker/login-action@v3'
         with:
           username: 'oauth2accesstoken'
-          password: '${{ steps.auth.outputs.auth_token }}'
+          password: '${{ steps.auth.outputs.access_token }}'
           registry: '${{ env.REGION }}-docker.pkg.dev'
 
       # --- 1. WEB APP (SERVICE) BUILD & PUSH ---
