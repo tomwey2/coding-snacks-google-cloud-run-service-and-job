@@ -116,7 +116,7 @@ def start_worker():
         # Konfigurationen aus Umgebungsvariablen laden (mit sinnvollen Fallbacks für lokales Testing)
         # Für einen echten Einsatz müssen GOOGLE_CLOUD_PROJECT und GOOGLE_CLOUD_REGION gesetzt werden.
         project_id = os.environ.get("GOOGLE_CLOUD_PROJECT", "cleankoda-poc")
-        region = os.environ.get("GOOGLE_CLOUD_REGION", "europe-west1")
+        region = os.environ.get("GOOGLE_CLOUD_REGION", "europe-west3")
         job_id = "poc-worker-job"
 
         # Den Full-Resource Name des Cloud Run Jobs zusammenbauen
