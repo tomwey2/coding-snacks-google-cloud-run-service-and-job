@@ -21,6 +21,22 @@ def index():
     """
     return render_template("index.html")
 
+@app.route("/get-data", methods=["GET"])
+def get_data():
+    if not session.get("user"):
+        return redirect("/login")
+    
+    try:
+        # Optionale Authentifizierung per Token, falls RLS in Supabase aktiviert ist
+        # if session.get("access_token"):
+        #     supabase.auth.set_session(session["access_token"], "")
+            
+        response = supabase.table('issues').select('name, created_at').execute()
+        return render_template("index.html", issues=response.data)
+    except Exception as e:
+        flash(f"Fehler beim Abrufen der Daten: {e}", "danger")
+        return render_template("index.html", issues=[])
+
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
