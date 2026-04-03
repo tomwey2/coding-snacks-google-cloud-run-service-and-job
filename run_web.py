@@ -1,14 +1,17 @@
 import os
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request, redirect, session, flash
 from google.cloud import run_v2
 from supabase import create_client, Client
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = "super-secret-poc-key"
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://placeholder-project.supabase.co")
-SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "placeholder-anon-key")
-# supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "placeholder-key")
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 @app.route("/", methods=["GET"])
@@ -17,6 +20,48 @@ def index():
     Route / (GET): Liefert die einfache HTML-Seite mit Bootstrap.
     """
     return render_template("index.html")
+
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        try:
+            supabase.auth.sign_up({"email": email, "password": password})
+            flash("Registrierung erfolgreich! Du kannst dich nun einloggen.", "success")
+            return redirect("/login")
+        except Exception as e:
+            flash(f"Fehler bei der Registrierung: {e}", "danger")
+
+    return render_template("auth.html", action="signup")
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        try:
+            res = supabase.auth.sign_in_with_password(
+                {"email": email, "password": password}
+            )
+            session["user"] = res.user.id
+            session["access_token"] = res.session.access_token
+            flash("Erfolgreich eingeloggt!", "success")
+            return redirect("/")
+        except Exception as e:
+            flash(f"Fehler beim Login: {e}", "danger")
+
+    return render_template("auth.html", action="login")
+
+
+@app.route("/logout", methods=["GET"])
+def logout():
+    supabase.auth.sign_out()
+    session.clear()
+    flash("Erfolgreich ausgeloggt.", "success")
+    return redirect("/")
 
 
 @app.route("/start-worker", methods=["POST"])

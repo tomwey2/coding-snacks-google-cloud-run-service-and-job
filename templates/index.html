@@ -9,12 +9,14 @@
     <style>
         body { 
             background-color: #f8f9fa; 
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .main-container {
             display: flex;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            margin: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            min-height: calc(100vh - 56px); /* Navbar height calc offset */
         }
         .card { 
             padding: 40px; 
@@ -43,11 +45,38 @@
     </style>
 </head>
 <body>
-    <div class="card">
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">Cloud Run PoC</a>
+            <div class="d-flex align-items-center">
+                {% if session.get('user') %}
+                    <span class="navbar-text me-3">Eingeloggt</span>
+                    <a href="/logout" class="btn btn-outline-light btn-sm">Log out</a>
+                {% else %}
+                    <a href="/login" class="btn btn-outline-light btn-sm me-2">Sign In</a>
+                    <a href="/signup" class="btn btn-primary btn-sm">Sign Up</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="container mt-3">
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category if category != 'error' else 'danger' }}">{{ message }}</div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    <div class="main-container">
+        <div class="card">
         <h1 class="mb-3 text-primary">Cloud Run PoC</h1>
         <p class="text-muted">Startet den super dynamischen Cloud Run Worker-Job direkt aus dem Frontend.</p>
         <button id="start-btn" class="btn btn-primary btn-lg btn-start" onclick="startWorker()">Start Worker</button>
         <div id="response-msg"></div>
+    </div>
     </div>
 
     <script>
