@@ -1,7 +1,7 @@
 import os
 from flask import Flask, render_template, jsonify, request, redirect, session, flash
 from google.cloud import run_v2
-from supabase import create_client, Client
+from supabase import create_client, Client, ClientOptions
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -11,7 +11,22 @@ app.secret_key = "super-secret-poc-key"
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://placeholder-project.supabase.co")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "placeholder-key")
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+
+def get_supabase_client() -> Client:
+    """
+    Creates for each request a fresh, secure client.
+    If the user is logged in, their personal token is injected.
+    """
+    access_token = session.get("access_token")
+
+    if access_token:
+        # Personalized client for logged-in users (RLS applies!)
+        options = ClientOptions(headers={"Authorization": f"Bearer {access_token}"})
+        return create_client(SUPABASE_URL, SUPABASE_KEY, options=options)
+    else:
+        # Anonymous client for guests (e.g. for login/signup)
+        return create_client(SUPABASE_URL, SUPABASE_KEY)
 
 
 @app.route("/", methods=["GET"])
@@ -21,34 +36,33 @@ def index():
     """
     return render_template("index.html")
 
+
 @app.route("/get-data", methods=["GET"])
 def get_data():
     if not session.get("user"):
         return redirect("/login")
-    
+
     try:
-        # Optionale Authentifizierung per Token, falls RLS in Supabase aktiviert ist
-        # if session.get("access_token"):
-        #     supabase.auth.set_session(session["access_token"], "")
-            
-        response = supabase.table('issues').select('name, created_at').execute()
+        db = get_supabase_client()
+        response = db.table("issues").select("name, created_at").execute()
         return render_template("index.html", issues=response.data)
     except Exception as e:
-        flash(f"Fehler beim Abrufen der Daten: {e}", "danger")
+        flash(f"Error fetching data: {e}", "danger")
         return render_template("index.html", issues=[])
 
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "POST":
+        db = get_supabase_client()
         email = request.form.get("email")
         password = request.form.get("password")
         try:
-            supabase.auth.sign_up({"email": email, "password": password})
-            flash("Registrierung erfolgreich! Du kannst dich nun einloggen.", "success")
+            db.auth.sign_up({"email": email, "password": password})
+            flash("Registration successful! You can now log in.", "success")
             return redirect("/login")
         except Exception as e:
-            flash(f"Fehler bei der Registrierung: {e}", "danger")
+            flash(f"Error during registration: {e}", "danger")
 
     return render_template("auth.html", action="signup")
 
@@ -56,27 +70,27 @@ def signup():
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "POST":
+        db = get_supabase_client()
         email = request.form.get("email")
         password = request.form.get("password")
         try:
-            res = supabase.auth.sign_in_with_password(
-                {"email": email, "password": password}
-            )
+            res = db.auth.sign_in_with_password({"email": email, "password": password})
             session["user"] = res.user.id
             session["access_token"] = res.session.access_token
-            flash("Erfolgreich eingeloggt!", "success")
+            flash("Successfully logged in!", "success")
             return redirect("/")
         except Exception as e:
-            flash(f"Fehler beim Login: {e}", "danger")
+            flash(f"Error during login: {e}", "danger")
 
     return render_template("auth.html", action="login")
 
 
 @app.route("/logout", methods=["GET"])
 def logout():
-    supabase.auth.sign_out()
+    db = get_supabase_client()
+    db.auth.sign_out()
     session.clear()
-    flash("Erfolgreich ausgeloggt.", "success")
+    flash("Successfully logged out.", "success")
     return redirect("/")
 
 
